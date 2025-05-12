@@ -9,3 +9,5 @@ venv39/
 
 # Ignore Python cache folders
 __pycache__/
+
+.DS_Store
