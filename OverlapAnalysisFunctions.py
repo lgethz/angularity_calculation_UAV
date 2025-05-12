@@ -179,7 +179,7 @@ def remove_edge_grains(outline, show_comparison=False):
         
         plt.subplot(1, 2, 2)
         plt.imshow(filtered_outline, cmap='viridis')
-        plt.title(f"Edge Grains Removed\n({remaining_count} grains)")
+        plt.title(f"Clasts Remaining\n({remaining_count} clasts)")
         plt.colorbar(label='Grain ID')
         
         # Highlight removed grains in the original image
@@ -221,16 +221,56 @@ def show_outline(outline):
         raise ValueError("ERROR: DEM data is empty. Please check the file path or format.")
 
 
-def check_dimension(dem, outline):
+def create_coordinate_transformer(dem, outline):
     """
-    Compares the dimensions of the DEM and outline arrays to ensure they match.
-
-    Parameters: DEM array and outline array
-    Output: Warning message if dimensions don't match
+    Creates coordinate transformation functions between DEM and outline datasets with different resolutions.
+    
+    Parameters:
+        dem: NumPy array of the DEM
+        outline: NumPy array of the grain outline/segmentation
+    
+    Returns:
+        dict: Dictionary with transformation functions and metadata
     """
-    if dem.shape != outline.shape:
-        print(f"WARNING: DEM shape {dem.shape} doesn't match outline shape {outline.shape}")
-        print("This may cause misalignment issues!")
+    dem_height, dem_width = dem.shape
+    outline_height, outline_width = outline.shape
+    
+    # Calculate scaling factors
+    height_ratio = outline_height / dem_height
+    width_ratio = outline_width / dem_width
+    
+    # Make sure scaling is consistent in both dimensions
+    if abs(height_ratio - width_ratio) > 0.01:
+        print(f"WARNING: Inconsistent scaling - height ratio: {height_ratio}, width ratio: {width_ratio}")
+    
+    scaling_factor = (height_ratio + width_ratio) / 2
+    print(f"Detected scaling factor: {scaling_factor}")
+    
+    # Create transformation functions
+    def outline_to_dem(y, x):
+        """Convert outline coordinates to DEM coordinates"""
+        dem_y = int(y / scaling_factor)
+        dem_x = int(x / scaling_factor)
+        # Ensure coordinates are within bounds
+        dem_y = max(0, min(dem_y, dem_height - 1))
+        dem_x = max(0, min(dem_x, dem_width - 1))
+        return dem_y, dem_x
+    
+    def dem_to_outline(y, x):
+        """Convert DEM coordinates to outline coordinates"""
+        outline_y = int(y * scaling_factor)
+        outline_x = int(x * scaling_factor)
+        outline_y = max(0, min(outline_y, outline_height - 1))
+        outline_x = max(0, min(outline_x, outline_width - 1))
+        return outline_y, outline_x
+    
+    return {
+        'scaling_factor': scaling_factor,
+        'outline_to_dem': outline_to_dem,
+        'dem_to_outline': dem_to_outline,
+        'dem_shape': dem.shape,
+        'outline_shape': outline.shape
+    }
 
 
 def find_boundaries(outline):
@@ -272,7 +312,7 @@ def find_boundaries(outline):
      return grain_boundaries
 
 
-def plot_boundaries_on_dem(dem, grain_boundaries):
+def plot_boundaries_on_dem(dem, grain_boundaries, outline = None):
     """
     Plots the grain boundaries on top of the DEM for visualization.
 
@@ -293,12 +333,31 @@ def plot_boundaries_on_dem(dem, grain_boundaries):
     if len(grain_boundaries) == 0:
         raise ValueError("ERROR: grain_boundaries dictionary is empty")
 
+    if not isinstance(dem, np.ndarray):
+        raise ValueError("ERROR: DEM data is not a valid NumPy array.")
+    
+    # Create transformer if outline is provided
+    transformer = None
+    if outline is not None:
+        transformer = create_coordinate_transformer(dem, outline)
+    
     plt.figure(figsize=(10, 10))
-    plt.imshow(dem, cmap='rainbow', alpha=0.5)  # or 'jet'
+    plt.imshow(dem, cmap='rainbow', alpha=0.5)
     
     for grain_id, contours in grain_boundaries.items():
         for contour in contours:
-            plt.plot(contour[:, 1], contour[:, 0], 'w-', linewidth=1)
+            # Transform coordinates if needed
+            if transformer:
+                # Create transformed contour points
+                transformed_contour = np.zeros_like(contour)
+                for i, (y, x) in enumerate(contour):
+                    dem_y, dem_x = transformer['outline_to_dem'](y, x)
+                    transformed_contour[i, 0] = dem_y
+                    transformed_contour[i, 1] = dem_x
+                plt.plot(transformed_contour[:, 1], transformed_contour[:, 0], 'w-', linewidth=1)
+            else:
+                # Use original coordinates (assuming they match DEM)
+                plt.plot(contour[:, 1], contour[:, 0], 'w-', linewidth=1)
     
     plt.title("Grain Boundaries on DEM")
     plt.colorbar(label='Elevation')
@@ -322,6 +381,7 @@ def analyse_overlap(grain_boundaries, DEM, outline, range_check: int = 5, VCO: i
         Ensures normal points outward from grain
         Checks points along normal vector for elevation differences
         If elevation at a point exceeds boundary elevation by VCO, marks as overlap
+        Accounts for different scales between DEM and outline
     Returns: 
         Dictionary mapping grain IDs to lists of overlap points
     """
@@ -342,6 +402,9 @@ def analyse_overlap(grain_boundaries, DEM, outline, range_check: int = 5, VCO: i
         
     if not isinstance(VCO, (int, float)) or VCO <= 0:
         raise ValueError(f"VCO must be a positive number, got {VCO}")
+    
+    transformer = create_coordinate_transformer(DEM, outline)
+    outline_to_dem = transformer['outline_to_dem']
 
     overlap_results = {}
     image_data = outline
@@ -389,27 +452,34 @@ def analyse_overlap(grain_boundaries, DEM, outline, range_check: int = 5, VCO: i
                                 normal_x = -normal_x
                                 normal_y = -normal_y
 
+                            dem_y, dem_x = outline_to_dem(y,x) # transform the coordinates to the DEM coordinates
+                            boundary_elevation = DEM[int(dem_y), int(dem_x)] # get the elevation of the boundary point
+
                             for d in range(1, range_check): # check for overlap in the range of the normal vector (1 to range_check away from the point in the direction of the normal vector)
-                                sample_y = int(round(y + d * normal_y))
-                                sample_x = int(round(x + d * normal_x))
+                                sample_outline_y = int(round(y + d * normal_y))
+                                sample_outline_x = int(round(x + d * normal_x))
+                                sample_dem_y, sample_dem_x = outline_to_dem(sample_outline_y, sample_outline_x) # transform the coordinates to the DEM coordinates
+                                
+                                if (0 <= sample_outline_y < outline.shape[0] and 
+                                    0 <= sample_outline_x < outline.shape[1]): # Check if the sample point is inside the image
 
-                                if (0 <= sample_y < DEM.shape[0] and 0 <= sample_x < DEM.shape[1]): # Check if sample is within DEM bounds
-                                    sample_elevation = DEM[sample_y, sample_x]
-                                    boundary_elevation = DEM[int(round(y)),int(round(x))]
-                                    elevation_difference = sample_elevation - boundary_elevation
+                                    if (0 <= sample_dem_y < DEM.shape[0] and 
+                                            0 <= sample_dem_x < DEM.shape[1]): # Check if the sample point is inside the DEM
 
+                                        sample_elevation = DEM[sample_dem_y, sample_dem_x]
+                                        elevation_difference = sample_elevation - boundary_elevation
 
-                                    if (elevation_difference > VCO and outline[sample_y, sample_x] != 0 and outline[sample_y, sample_x] != grain_id):
-                                        overlapped_grain_id = outline[sample_y, sample_x]
-                                        
-                                        if grain_id != overlapped_grain_id:
-                                            if grain_id not in overlap_results:
-                                                overlap_results[grain_id] = []
-                                            
-                                            if (x,y) not in overlap_results[grain_id]:
-                                                overlap_results[grain_id].append((x,y))
-                                        
-                                            break
+                                        if (elevation_difference > VCO and outline[sample_outline_y, sample_outline_x] != 0 and outline[sample_outline_y, sample_outline_x] != grain_id):
+                                                overlapped_grain_id = outline[sample_outline_y, sample_outline_x]
+                                                
+                                                if grain_id != overlapped_grain_id:
+                                                    if grain_id not in overlap_results:
+                                                            overlap_results[grain_id] = []
+                                                        
+                                                    if (x,y) not in overlap_results[grain_id]:
+                                                            overlap_results[grain_id].append((x,y))
+                                                    
+                                                    break
     return overlap_results
 
 
@@ -706,7 +776,9 @@ def visualize_normal_vectors(grain_boundaries, outline, sample_rate=10):
     plt.show()
 
 
-def process_folder(dem_folder, outline_folder, range_check, VCO, output_base="./overlap_output"):
+def process_folder(dem_folder, outline_folder, range_check, VCO, 
+                  matlab_tol=0.05, matlab_factor=0.98, matlab_span=0.07, 
+                  matlab_exclusion_range=22, output_base="./overlap_output"):
     """
     Process all DEM and outline files in the specified folders.
     
@@ -770,10 +842,9 @@ def process_folder(dem_folder, outline_folder, range_check, VCO, output_base="./
             if user_input == "yes":
                 outline = remove_edge_grains(outline, show_comparison=False)
             
-        check_dimension(dem, outline)
         
         grain_boundaries = find_boundaries(outline)
-        plot_boundaries_on_dem(dem, grain_boundaries)
+        plot_boundaries_on_dem(dem, grain_boundaries, outline)
         
         overlap_results = analyse_overlap(grain_boundaries, dem, outline, range_check, VCO)
         visualize_overlap(overlap_results, grain_boundaries, outline)
@@ -824,7 +895,12 @@ def process_folder(dem_folder, outline_folder, range_check, VCO, output_base="./
             
             eng.cd(matlab_script_dir)
             
-            eng.Wadell_roundness(images_folder_abs, csv_path_abs, nargout=0)
+            eng.Wadell_roundness(images_folder_abs, csv_path_abs, 
+                                float(matlab_tol), 
+                                float(matlab_factor), 
+                                float(matlab_span), 
+                                float(matlab_exclusion_range), 
+                                nargout=0)
 
             analysis_folder = os.path.join(image_output_folder, "analysis_results")
             if os.path.exists(analysis_folder):
@@ -847,7 +923,10 @@ def process_folder(dem_folder, outline_folder, range_check, VCO, output_base="./
         print(f"===== Completed analysis for {dem_name} =====\n")
 
 
-def process_single_picture(dem_path, outline_path, range_check=5, VCO=0.002, output_folder="./overlap_output"):
+def process_single_picture(dem_path, outline_path, range_check: int = 5, VCO: float = 0.002, 
+                          matlab_tol: float = 0.05, matlab_factor: float = 0.98, 
+                          matlab_span: float = 0.07, matlab_exclusion_range: int = 22, 
+                          output_folder: str = "./overlap_output"):    
     """
     Process a single DEM and outline file.
     
@@ -888,10 +967,9 @@ def process_single_picture(dem_path, outline_path, range_check=5, VCO=0.002, out
         if user_input_tif == "no":
             show_outline(outline)
         
-    check_dimension(dem, outline)
     
     grain_boundaries = find_boundaries(outline)
-    plot_boundaries_on_dem(dem, grain_boundaries)
+    plot_boundaries_on_dem(dem, grain_boundaries, outline)
     
     overlap_results = analyse_overlap(grain_boundaries, dem, outline, range_check, VCO)
     visualize_overlap(overlap_results, grain_boundaries, outline)
@@ -942,7 +1020,12 @@ def process_single_picture(dem_path, outline_path, range_check=5, VCO=0.002, out
         
         eng.cd(matlab_script_dir)
         
-        eng.Wadell_roundness(images_folder_abs, csv_path_abs, nargout=0)
+        eng.Wadell_roundness(images_folder_abs, csv_path_abs, 
+                            float(matlab_tol), 
+                            float(matlab_factor), 
+                            float(matlab_span), 
+                            float(matlab_exclusion_range), 
+                            nargout=0)
         
         analysis_folder = os.path.join(image_output_folder, "analysis_results")
         if os.path.exists(analysis_folder):
@@ -979,10 +1062,9 @@ if __name__ == "__main__":
     outline = load_outline("Path_to_your_outline.tif")
     show_outline(outline)
 
-    check_dimension(DEM, outline)
 
     grain_boundaries = find_boundaries(outline)
-    plot_boundaries_on_dem(DEM, grain_boundaries)
+    plot_boundaries_on_dem(DEM, grain_boundaries, outline)
 
     overlap_results = analyse_overlap(grain_boundaries, DEM, outline, 4, 0.001)
     visualize_overlap(overlap_results, grain_boundaries, outline)

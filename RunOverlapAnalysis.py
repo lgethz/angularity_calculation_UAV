@@ -6,7 +6,12 @@ import glob
 # Define optimized parameters for 2000x2000 pixel images
 VCO = 0.001  # Recommended VCO for overlap analysis in meters
 range_check = 5    # Recommended range for overlap analysis in pixels
-# the parameter exclusion_range needs to be changed in the matlab script Wadell_roundness.m
+
+# MATLAB parameters 
+matlab_tol = 0.05      # Forming straight lines to the boundary
+matlab_factor = 0.98   # Fitting small circles 
+matlab_span = 0.07     # Nonparametric fitting
+matlab_exclusion_range = 22  # Radius for filtering convex points near overlaps
 
 
 # Create timestamped output folder to keep analyses separate
@@ -14,8 +19,8 @@ timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 output_base = f"./overlap_output_{timestamp}"
 
 # Define default paths (can be modified by user input)
-input_dem_path = "/Users/larsgubeli/Library/CloudStorage/OneDrive-ETHZurich/97_Bachelorarbeit/10_DataBrienz/01_ExportedDEM/BrienzDEM-0-4.tif"
-input_outline_path = "/Users/larsgubeli/Library/CloudStorage/OneDrive-ETHZurich/97_Bachelorarbeit/10_DataBrienz/05_ImageGrainsAnalysis/01_ExportedOrthomosaic_Segmented/BrienzOrthomosaic-0-4_IG2coarse_pred.tif"
+input_dem_path = "/Users/larsgubeli/Library/CloudStorage/OneDrive-ETHZurich/97_Bachelorarbeit/10_DataBrienz/03_DEM_Samuele/Brienz_DEM_Samuele-4-7.tif"
+input_outline_path = "/Users/larsgubeli/Library/CloudStorage/OneDrive-ETHZurich/97_Bachelorarbeit/10_DataBrienz/04_ImageGrainsAnalysis/02_OrthomosaicSamuele/Brienz_Orthomosaic_Samuele-4-7_IG2coarse_pred.tif"
 input_dem_folder = "/Users/larsgubeli/Library/CloudStorage/OneDrive-ETHZurich/97_Bachelorarbeit/10_DataBrienz/01_ExportedDEM"
 input_outline_folder = "/Users/.../Outline"
 
@@ -41,7 +46,10 @@ try:
         print("\n--- SINGLE IMAGE PROCESSING ---")
         
         # Process the single image with minimal output
-        process_single_picture(input_dem_path, input_outline_path, range_check, VCO, output_base)
+        process_single_picture(input_dem_path, input_outline_path, 
+                            range_check, VCO, 
+                            matlab_tol, matlab_factor, matlab_span, matlab_exclusion_range,
+                            output_base)
         
     elif choice == "2":
         # Folder processing

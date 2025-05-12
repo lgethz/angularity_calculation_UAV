@@ -21,11 +21,18 @@ else
     elseif range(1) <=2 && range(end) >= size(convex, 1)-1
         cv = [convex(range(end,1):end, :);convex(1:range(1, 2), :)];
         [z3, r3] = fit_small_circles(sz, pixel_list,  cv, boundary_points, R, factor, minPoints);
-        z1(:, 1) = []; z1(:, end) = [];
-        r1(1) = []; r1(end) = [];
+        
+        % FIXED: Replace the two operations with a single conditional operation
+        if size(z1, 2) >= 3  % Only remove first/last columns if we have at least 3 columns
+            z1(:, 1) = []; z1(:, end) = [];
+        end
+        
+        % Safety check for r1
+        if length(r1) >= 3  % Only remove first/last elements if we have at least 3 elements
+            r1(1) = []; r1(end) = [];
+        end
     end
+    
     z = [z1, z2, z3]';
-    r  =[r1, r2, r3]';
-end
-
+    r = [r1, r2, r3]';
 end

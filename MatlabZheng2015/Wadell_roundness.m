@@ -1,4 +1,4 @@
-function Wadell_roundness(input_dir, csv_file)
+function Wadell_roundness(input_dir, csv_file, tol, factor, span, exclusion_range)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % MODIFICATIONS:
@@ -49,11 +49,20 @@ function Wadell_roundness(input_dir, csv_file)
 close all
 addpath(genpath('main_Funs'))
 
-%% parameter settings
-tol = 0.05;     % forming straight lines to the boundary, original value = 0.3
-factor = 0.98; % fitting small circles, original value = 0.98
-span = 0.07;   % nonparametric fitting, if the boundary of particle is very rough, try a larger value, original value = 0.07
-exclusion_range = 22; % radius for filtering convex points near overlap regions 
+% Add parameter validation with defaults
+if nargin < 3 || isempty(tol)
+    tol = 0.05;  % Default value
+end
+if nargin < 4 || isempty(factor)
+    factor = 0.98;  % Default value
+end
+if nargin < 5 || isempty(span)
+    span = 0.07;  % Default value
+end
+if nargin < 6 || isempty(exclusion_range)
+    exclusion_range = 22;  % Default value
+end
+
 
 %% Create output directory for results
 output_dir = fullfile(fileparts(input_dir), 'analysis_results');
@@ -190,6 +199,13 @@ if isempty(filtered_convex)
     fprintf('  Warning: All convex points were filtered out. Skipping this grain.\n');
     continue;  % Skip to the next grain
 end
+
+% After the empty check, add a minimum count check
+if size(filtered_convex, 1) < 8  % At least 8 points needed for reliable processing
+    fprintf('  Warning: Too few convex points (%d) remain after filtering. Skipping this grain.\n', size(filtered_convex, 1));
+    continue;  % Skip to the next grain
+end
+
 h_corners = plot(filtered_convex(:,1), filtered_convex(:,2), 'b.', 'MarkerSize', 10);
 h_excluded = [];
 if ~isempty(excluded_convex)
@@ -197,7 +213,17 @@ if ~isempty(excluded_convex)
 end
 
     % Fit small circles (only to non-overlap points)
-    [z, r] = compute_corner_circles(sz, obj, filtered_convex, boundary_points, R, factor, 3);
+    try
+        [z, r] = compute_corner_circles(sz, obj, filtered_convex, boundary_points, R, factor, 3);
+        
+        if isempty(z) || isempty(r)
+            fprintf('  Warning: No valid corner circles found. Skipping this grain.\n');
+            continue;  % Skip to the next grain
+        end
+    catch e
+        fprintf('  Error in corner circle computation: %s. Skipping this grain.\n', e.message);
+        continue;  % Skip to the next grain
+    end
 
     % Plot the circle centers and circles
     h_centers_all = [];
