@@ -1,0 +1,11 @@
+# Ignore all folders that start with 'overlap_output'
+overlap_output*/
+
+# Ignore all folders named 'data' (at any level)
+**/data/
+
+# Ignore the virtual environment folder
+venv39/
+
+# Ignore Python cache folders
+__pycache__/

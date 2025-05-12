@@ -1,0 +1,118 @@
+# Grain Overlap Analysis & Angularity Calculation
+
+## Overview
+This Python code (originally written with python version 3.9.13 - it is recommended to run it in a virtual environment that uses python 3.9.13) analyzes overlapping regions between sediment grains using Digital Elevation Models (DEM) and grain segmentation data. The code loads the segmentation data, which can be obtained from the ImageGrains machine-learning algorithm used to determine clasts. It then detects where one grain overlaps another based on elevation differences. Then it calculates grain angularity while accounting for overlap regions using a modified version of Zheng's (2015) MATLAB code.
+
+The original code by Zheng 2015 can be downloaded from here: https://ch.mathworks.com/matlabcentral/fileexchange/60651-particle-roundness-and-sphericity-computation
+
+The code for ImageGrains can be found here: https://github.com/dmair1989/imagegrains/tree/main
+
+This code was created with the help of CoPilot AI Claude 3.7 Sonnet Thinking.
+
+## Author
+Lars Gübeli  
+Quantification of landslide sediment angularity using machine learning assisted image segmentation  
+Bachelor Thesis Project  
+ETH Zürich  
+June 2025
+
+------------------------------------------------------------
+
+## Features
+- Loads and processes Digital Elevation Models (DEMs)
+- Processes grain segmentation data from ImageGrains
+- Identifies grain boundaries using contour detection
+- Analyzes potential overlap between adjacent grains
+- Visualizes results with customizable parameters
+- Exports results as georeferenced GeoTIFF files
+- Calculates grain angularity excluding overlap regions (based on modified Zheng 2015 code)
+- Creates individual grain images for further analysis
+- Generates comprehensive CSV data of overlap points
+- Provides visual representation of all analysis stages
+- Produces detailed angularity metrics accounting for overlap
+
+## External Code Attribution
+This project incorporates modified MATLAB code from:
+
+**Junxing Zheng, University of Michigan, Ann Arbor (2015)**  
+The angularity calculation is based on code originally developed by Junxing Zheng, with modifications to handle grain overlap regions.
+
+**Citation:**  
+Zheng, J., and Hryciw, R.D. (2015). "Traditional Soil Particle Sphericity, Roundness and Surface Roughness by Computational Geometry", Geotechnique, Vol. 65, No. 6, 494-506, DOI:10.1680/geot./14-P-192.
+
+**License:**  
+The original code is distributed under a BSD license. See the LICENSE.txt file in the MatlabZheng2015 directory for details.
+
+## Dependencies
+- numpy
+- matplotlib
+- rasterio
+- scikit-image
+- scipy
+- matlabengine
+- pandas
+- seaborn
+- tqdm
+- skicit-learn
+- MATLAB with Image Processing Toolbox and Curve Fitting Toolbox
+
+## Installation:
+1. Clone this repository
+2. Install required packages from Python after creating a virtual environment (it is suggested to use Visual Studio Code):
+   - Create a virtual environment in the command line (recommended, example for MacOS):
+     ```
+     python3.9 -m venv venv39
+     source venv39/bin/activate
+     ```
+   - Install Python dependencies:
+     ```
+     pip install -r requirements.txt
+     ```
+
+3. Install MATLAB and MATLAB Engine:
+   - Install MATLAB on your computer ([https://www.mathworks.com/help/install/ug/install-products-with-internet-connection.html])
+   - Install MATLAB's Image Processing Toolbox and the Curve Fitting Toolbox (required for grain angularity analysis)
+   - Install matlabengine for python ([https://ch.mathworks.com/help/matlab/matlab_external/python-setup-script-to-install-matlab-engine-api.html])
+   - Example for MacOS (run following commands in your virtual environment in a terminal):
+     ```
+     # Access virtual environment
+     source venv39/bin/activate
+     # Install matlab engine
+     cd "/Applications/MATLAB_R2024a.app/extern/engines/python" (change to your matlab version and path)
+     python setup.py install
+     ```
+
+
+## Running the Analysis
+The main script to run the complete analysis is `RunOverlapAnalysis.py`. This script:
+
+1. Processes the DEM and grain segmentation data
+2. Identifies overlap points between grains 
+3. Saves individual grain images and overlap point data
+4. Calls the MATLAB code to calculate angularity metrics while excluding overlap regions
+
+------------------------------------------------------------
+
+## Parameter Optimization Tools
+The Analysis_threshold_and_range directory contains tools for optimizing the detection parameters (threshold and range_check) to improve accuracy and precision of overlap detection:
+
+
+# CreateOverlapTruth.py
+This interactive tool allows users to manually create ground truth data for overlap regions:
+
+1. Loads DEM and grain segmentation data
+2. Provides an interactive interface for selecting grains
+3. Uses lasso selection to mark actual overlap points (ground truth)
+4. Exports ground truth data to CSV for parameter optimization
+5. Supports image transformations and multiple selection modes
+
+# AnalyseParameters.py
+This script analyzes different combinations of threshold and range_check parameters to determine optimal values:
+
+1. Tests multiple parameter combinations against ground truth data
+2. Calculates accuracy, precision, recall, and F1 scores using confusion matrices
+3. Generates heatmaps and visualizations of performance metrics
+4. Identifies the best parameter settings for different optimization goals
+5. Outputs comprehensive analysis results to CSV and image files
+
+These parameter optimization tools enable users to fine-tune the overlap detection algorithm for specific types of grain imagery and elevation data, resulting in more accurate angularity calculations.
