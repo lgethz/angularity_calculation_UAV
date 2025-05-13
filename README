@@ -30,12 +30,15 @@ June 2025
 - Generates comprehensive CSV data of overlap points
 - Provides visual representation of all analysis stages
 - Produces detailed angularity metrics accounting for overlap
+- Supports multi-resolution analysis with automatic coordinate transformation
+- Calculates Pixel Count Diameter (PCD) for grain size quantification
+
 
 ## External Code Attribution
 This project incorporates modified MATLAB code from:
 
 **Junxing Zheng, University of Michigan, Ann Arbor (2015)**  
-The angularity calculation is based on code originally developed by Junxing Zheng, with modifications to handle grain overlap regions.
+The angularity calculation is based on code originally developed by Junxing Zheng and R.D. Hryciw, with modifications to handle grain overlap regions.
 
 **Citation:**  
 Zheng, J., and Hryciw, R.D. (2015). "Traditional Soil Particle Sphericity, Roundness and Surface Roughness by Computational Geometry", Geotechnique, Vol. 65, No. 6, 494-506, DOI:10.1680/geot./14-P-192.
@@ -86,16 +89,59 @@ The original code is distributed under a BSD license. See the LICENSE.txt file i
 ## Running the Analysis
 The main script to run the complete analysis is `RunOverlapAnalysis.py`. This script:
 
-1. Processes the DEM and grain segmentation data
-2. Identifies overlap points between grains 
-3. Saves individual grain images and overlap point data
-4. Calls the MATLAB code to calculate angularity metrics while excluding overlap regions
+Input Requirements
+The script accepts the following input formats:
+
+DEM Data:
+1. GeoTIFF files (.tif) containing elevation data
+2. Different resolutions supported through automatic coordinate transformation
+3. Can process both single files or entire directories of DEMs
+
+Grain Segmentation Data:
+1. Segmentation masks as NumPy arrays (.npy)
+2. GeoTIFF files (.tif) from ImageGrains or other segmentation tools
+3. Each grain should have a unique integer ID (background = 0)
+4. Can handle multi-scale data with automatic scaling detection
+
+## Analysis Workflow
+The script performs the following operations:
+
+Data Loading & Preprocessing:
+1. Loads DEM and segmentation data
+2. Automatically detects resolution differences and scaling factors
+3. Removes edge grains (optional) to avoid boundary artifacts
+4. Creates a coordinate transformation system for multi-resolution analysis
+
+Boundary & Overlap Detection:
+1. Extracts grain boundaries using contour detection
+2. Analyzes elevation profiles perpendicular to grain boundaries
+3. Identifies potential overlap points based on elevation differences
+4. Applies vertical cutoff optimization (VCO) parameter to control sensitivity
+5. Creates overlap point database for each grain
+
+Individual Grain Processing:
+1. Extracts each grain as a separate image
+2. Maps overlap points to individual grain coordinate systems
+3. Prepares data structures for MATLAB angularity analysis
+4. Applies exclusion zone around overlap points to prevent edge effects
+
+MATLAB Integration:
+1. Transfers grain and overlap data to MATLAB
+2. Executes modified Zheng (2015) algorithm for each grain
+3. Filters out convex points near overlap regions
+4. Calculates angularity metrics (roundness, sphericity)
+5. Returns complete analysis with diagnostic information
+6. Result Compilation & Visualization:
+
+Aggregates individual grain results
+1. Generates visualization of overlap points and angularity metrics
+2. Creates comprehensive CSV output of all measurements
+3. Produces summary statistics and distribution analysis
 
 ------------------------------------------------------------
 
 ## Parameter Optimization Tools
 The Analysis_threshold_and_range directory contains tools for optimizing the detection parameters (threshold and range_check) to improve accuracy and precision of overlap detection:
-
 
 # CreateOverlapTruth.py
 This interactive tool allows users to manually create ground truth data for overlap regions:
@@ -116,3 +162,15 @@ This script analyzes different combinations of threshold and range_check paramet
 5. Outputs comprehensive analysis results to CSV and image files
 
 These parameter optimization tools enable users to fine-tune the overlap detection algorithm for specific types of grain imagery and elevation data, resulting in more accurate angularity calculations.
+
+------------------------------------------------------------
+
+# calculatePCD.py
+This utility calculates the Pixel Count Diameter (PCD) for all grains in a segmentation image:
+
+1. Supports both `.npy` and `.tif` file formats for segmentation data
+2. Finds the maximum diameter for each grain (in pixels)
+3. Generates visualizations showing the diameter lines for each grain
+4. Outputs comprehensive statistics (min, max, mean, median PCD)
+5. Saves results to CSV for further analysis
+6. Can be used to determine the value for matlab_tol
