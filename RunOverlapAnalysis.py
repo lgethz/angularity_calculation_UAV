@@ -19,9 +19,9 @@ timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 output_base = f"./overlap_output_{timestamp}"
 
 # Define default paths (can be modified by user input)
-input_dem_path = "/Users/larsgubeli/Library/CloudStorage/OneDrive-ETHZurich/97_Bachelorarbeit/10_DataBrienz/03_DEM_Samuele/Brienz_DEM_Samuele-4-7.tif"
-input_outline_path = "/Users/larsgubeli/Library/CloudStorage/OneDrive-ETHZurich/97_Bachelorarbeit/10_DataBrienz/04_ImageGrainsAnalysis/02_OrthomosaicSamuele/Brienz_Orthomosaic_Samuele-4-7_IG2coarse_pred.tif"
-input_dem_folder = "/Users/larsgubeli/Library/CloudStorage/OneDrive-ETHZurich/97_Bachelorarbeit/10_DataBrienz/01_ExportedDEM"
+input_dem_path = "/Users/.../DEM.tif"
+input_outline_path = "/Users/.../Outline.npy"
+input_dem_folder = "/Users/.../DEM"
 input_outline_folder = "/Users/.../Outline"
 
 try:
