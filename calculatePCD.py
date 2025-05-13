@@ -164,4 +164,5 @@ if __name__ == "__main__":
     for i, (grain_id, pcd) in enumerate(list(pcd_results.items())[:5]):
         print(f"Grain ID: {grain_id}, PCD: {pcd:.2f} pixels")
     
+    print("\n--- PCD Calculation Complete ---")
     print("\nComplete! Check the output folder for full results.")
