@@ -13,11 +13,11 @@ def main():
     Parameters:
         None
     """
-    #dem_path = "/Users/larsgubeli/Library/CloudStorage/OneDrive-ETHZurich/97_Bachelorarbeit/06_ImageGrainsAnalysis/DataforOverlapCalculation2000x2000/DEM/Image02_DEM.tif"
-    ortho_path = "/Users/larsgubeli/Library/CloudStorage/OneDrive-ETHZurich/97_Bachelorarbeit/06_ImageGrainsAnalysis/DataforOverlapCalculation2000x2000/Orthomosaics/Image04_Orthomosaic.jpg"
+    #dem_path = "/Users/...DEM.tif"
+    ortho_path = "/Users/.../Orthomosaic.jpg"
     
     # Specify your outlines directory or file
-    outlines_path = "/Users/larsgubeli/Library/CloudStorage/OneDrive-ETHZurich/97_Bachelorarbeit/06_ImageGrainsAnalysis/DataforOverlapCalculation2000x2000/ImageGrains/Image04_Orthomosaic_IG2coarse_pred.tif"
+    outlines_path = "/Users/.../outline.tif"
     
     # Use orthomosaic for better visualization with outlines
     selector = create_ground_truth(ortho_path, outlines_path)
