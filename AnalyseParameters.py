@@ -8,13 +8,14 @@ from OverlapAnalysisFunctions import load_dem, load_outline, read_npy_file, find
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 
 def main():
-    # Define file paths
-    dem_path = "/Users/larsgubeli/Library/CloudStorage/OneDrive-ETHZurich/97_Bachelorarbeit/06_ImageGrainsAnalysis/DataforOverlapCalculation2000x2000/DEM/Image04_DEM.tif"
-    outline_path = "/Users/larsgubeli/Library/CloudStorage/OneDrive-ETHZurich/97_Bachelorarbeit/06_ImageGrainsAnalysis/DataforOverlapCalculation2000x2000/ImageGrains/Image04_Orthomosaic_IG2coarse_pred.tif"
-    ground_truth_path = "/Users/larsgubeli/Library/CloudStorage/OneDrive-ETHZurich/97_Bachelorarbeit/09_Statistics/ParameterAnalysis/Image04_ImageGrains_OverlapTruth.csv"
+    # Define folders containing data - modify these paths as needed
+    dem_folder = "/Users/.../DEM"
+    outline_folder = "/Users/.../NPY"
+    truth_folder = "/Users/.../ManuallyMarked"
     
     # Create a results directory with timestamp
     import datetime
+    import re
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     results_dir = f"parameter_analysis_results_{timestamp}"
     
@@ -23,65 +24,235 @@ def main():
         print(f"Created results directory: {results_dir}")
     
     # Define parameter ranges to test
-    VCOs = [0.0005, 0.001, 0.0015, 0.002, 0.0025, 0.003, 0.0035, 0.004, 0.0045, 0.005, 0.0055, 0.006, 0.0065, 0.007, 0.0075, 0.008]
+    VCOs = [0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01, 0.02, 0.03, 0.04, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
     range_checks = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
     
-    # Run the analysis
-    results = analyze_parameters(
-        dem_path=dem_path,
-        outline_path=outline_path,
-        ground_truth_path=ground_truth_path,
-        VCOs=VCOs,
-        range_checks=range_checks,
-        verbose=True  # Set to False to suppress detailed output for each combination
-    )
+    # Find all files in each folder
+    dem_files = [f for f in os.listdir(dem_folder) if f.endswith('.tif')]
+    outline_files = [f for f in os.listdir(outline_folder) if f.endswith('.tif') or f.endswith('.npy')]
+    truth_files = [f for f in os.listdir(truth_folder) if f.endswith('.csv')]
     
-    # Save raw results to CSV in the results directory
-    csv_path = os.path.join(results_dir, 'parameter_analysis_results.csv')
-    results.to_csv(csv_path, index=False)
-    print(f"Results saved to {csv_path}")
+    print(f"Found {len(dem_files)} DEM files")
+    print(f"Found {len(outline_files)} outline files")
+    print(f"Found {len(truth_files)} ground truth files")
     
-    # Save a summary of parameter ranges and input files
-    with open(os.path.join(results_dir, 'analysis_info.txt'), 'w') as f:
-        f.write(f"Analysis performed on: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-        f.write(f"DEM file: {dem_path}\n")
-        f.write(f"Outline file: {outline_path}\n")
-        f.write(f"Ground truth file: {ground_truth_path}\n\n")
-        f.write(f"VCO values: {VCOs}\n")
-        f.write(f"Range check values: {range_checks}\n")
+    # Extract identifiers from filenames
+    # Pattern looking for X-Y format (like 0-2, 13-1, etc.)
+    pattern = r'(\d+-\d+)'
     
-    # Find the best parameters for different metrics and save the results
-    best_params = {}
-    for metric in ['accuracy', 'precision', 'recall', 'f1_score']:
-        print("\n" + "="*50)
-        best_param = find_best_parameters(results, metric=metric)
-        best_params[metric] = best_param
+    # Create dictionaries to store files by their identifier
+    dem_dict = {}
+    for f in dem_files:
+        match = re.search(pattern, f)
+        if match:
+            identifier = match.group(1)
+            dem_dict[identifier] = f
+    
+    outline_dict = {}
+    for f in outline_files:
+        match = re.search(pattern, f)
+        if match:
+            identifier = match.group(1)
+            outline_dict[identifier] = f
+    
+    truth_dict = {}
+    for f in truth_files:
+        match = re.search(pattern, f)
+        if match:
+            identifier = match.group(1)
+            truth_dict[identifier] = f
+    
+    # Create datasets by matching common identifiers
+    datasets = []
+    for identifier in dem_dict.keys():
+        if identifier in outline_dict and identifier in truth_dict:
+            datasets.append({
+                'name': f"dataset_{identifier}",
+                'dem': os.path.join(dem_folder, dem_dict[identifier]),
+                'outline': os.path.join(outline_folder, outline_dict[identifier]),
+                'truth': os.path.join(truth_folder, truth_dict[identifier])
+            })
+    
+    print(f"Successfully matched {len(datasets)} complete datasets")
+    
+    # Display matched datasets
+    for i, dataset in enumerate(datasets):
+        print(f"\nDataset {i+1}: {dataset['name']}")
+        print(f"  DEM: {os.path.basename(dataset['dem'])}")
+        print(f"  Outline: {os.path.basename(dataset['outline'])}")
+        print(f"  Ground Truth: {os.path.basename(dataset['truth'])}")
+    
+    # Rest of your function remains the same...
+    
+    # Dictionary to store results from all datasets
+    all_datasets_results = []
+    dataset_info = []
+    
+    # Process each matched dataset
+    for dataset in datasets:
+        print(f"\n{'='*50}")
+        print(f"Processing dataset: {dataset['name']}")
+        print(f"{'='*50}")
         
-        # Visualize results and save in the results directory
-        visualize_results(
-            results,
-            metric=metric,
-            save_path=os.path.join(results_dir, f'visualization_{metric}.png')
-        )
-
-    # Generate enhanced F1 score heatmap
-    visualize_f1_heatmap(
-        results,
-        save_path=os.path.join(results_dir, 'f1_score_heatmap.png'),
-        highlight_best=True
-    )
-
-    for cm_metric in ['TP', 'TN', 'FP', 'FN']:
-        visualize_confusion_matrix(
-        results,
-        metric=cm_metric,
-        save_path=os.path.join(results_dir, f'confusion_matrix_{cm_metric}.png')
+        dem_path = dataset['dem']
+        outline_path = dataset['outline']
+        ground_truth_path = dataset['truth']
+        
+        # Save dataset info
+        dataset_info.append({
+            'name': dataset['name'],
+            'dem_file': os.path.basename(dem_path),
+            'outline_file': os.path.basename(outline_path),
+            'ground_truth_file': os.path.basename(ground_truth_path)
+        })
+        
+        # Run analysis for this dataset
+        try:
+            results = analyze_parameters(
+                dem_path=dem_path,
+                outline_path=outline_path,
+                ground_truth_path=ground_truth_path,
+                VCOs=VCOs,
+                range_checks=range_checks,
+                verbose=False  # Reduce output verbosity for multiple datasets
+            )
+            
+            # Add dataset identifier to results
+            results['dataset'] = dataset['name']
+            
+            # Save individual results
+            dataset_results_dir = os.path.join(results_dir, dataset['name'])
+            os.makedirs(dataset_results_dir, exist_ok=True)
+            
+            # Save individual dataset results
+            results.to_csv(os.path.join(dataset_results_dir, 'parameter_analysis_results.csv'), index=False)
+            
+            # Create individual heatmap
+            visualize_f1_heatmap(
+                results,
+                save_path=os.path.join(dataset_results_dir, 'f1_score_heatmap.png'),
+                highlight_best=True,
+                show_plot=False
+            )
+            
+            # Store results for aggregation
+            all_datasets_results.append(results)
+            
+        except Exception as e:
+            print(f"Error processing dataset {dataset['name']}: {str(e)}")
+            continue
+    
+    # If no datasets were processed successfully, exit
+    if not all_datasets_results:
+        print("No datasets were processed successfully. Exiting.")
+        return
+    
+    # Combine all results
+    combined_results = pd.concat(all_datasets_results)
+    
+    # Calculate average F1 scores for each parameter combination
+    avg_results = combined_results.groupby(['VCO', 'range_check']).agg({
+        'TP': 'mean',
+        'FP': 'mean',
+        'TN': 'mean',
+        'FN': 'mean',
+        'accuracy': 'mean',
+        'precision': 'mean',
+        'recall': 'mean',
+        'f1_score': 'mean'
+    }).reset_index()
+    
+    # Save the averaged results
+    avg_results.to_csv(os.path.join(results_dir, 'average_results.csv'), index=False)
+    print(f"Average results saved to {os.path.join(results_dir, 'average_results.csv')}")
+    
+    # Save dataset information for reference
+    with open(os.path.join(results_dir, 'datasets_info.txt'), 'w') as f:
+        f.write(f"Analysis performed on: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+        f.write(f"Number of datasets analyzed: {len(all_datasets_results)}\n\n")
+        
+        for i, info in enumerate(dataset_info):
+            f.write(f"Dataset {i+1}: {info['name']}\n")
+            f.write(f"  - DEM file: {info['dem_file']}\n")
+            f.write(f"  - Outline file: {info['outline_file']}\n")
+            f.write(f"  - Ground truth file: {info['ground_truth_file']}\n\n")
+        
+        f.write(f"Parameter ranges:\n")
+        f.write(f"  - VCO values: {VCOs}\n")
+        f.write(f"  - Range check values: {range_checks}\n")
+    
+    # Create heatmap of average F1 scores
+    plt.figure(figsize=(14, 12))
+    
+    # Create pivot table for average F1 scores
+    pivot_table = avg_results.pivot_table(
+        values='f1_score', 
+        index='VCO', 
+        columns='range_check'
     )
     
-    # Save best parameters to a JSON file
+    # Find best parameters
+    best_idx = avg_results['f1_score'].idxmax()
+    best_row = avg_results.loc[best_idx]
+    best_threshold = best_row['VCO']
+    best_range_check = best_row['range_check']
+    best_f1 = best_row['f1_score']
+    
+    # Create the heatmap
+    ax = sns.heatmap(
+        pivot_table,
+        annot=True, 
+        cmap='viridis',
+        fmt='.3f',
+        linewidths=0.5,
+        cbar_kws={'label': 'Average F1 Score'}
+    )
+    
+    # Highlight the best parameter combination
+    idx_y = list(pivot_table.index).index(best_threshold)
+    idx_x = list(pivot_table.columns).index(best_range_check)
+    ax.add_patch(plt.Rectangle((idx_x, idx_y), 1, 1, fill=False, edgecolor='red', lw=3))
+    
+    # Title and labels
+    ax.set_title('Average F1 Score by VCO and Range Check (Across All Datasets)', fontsize=18, fontweight='bold')
+    ax.set_ylabel('VCO', fontsize=14, fontweight='bold')
+    ax.set_xlabel('Range Check', fontsize=14, fontweight='bold')
+    
+    # Add annotation for best parameters
+    plt.figtext(0.5, 0.01, 
+               f'Best Average F1 Score: {best_f1:.4f} (VCO={best_threshold}, Range Check={best_range_check})',
+               ha='center', fontsize=14, 
+               bbox=dict(facecolor='white', alpha=0.8, boxstyle='round,pad=0.5'))
+    
+    plt.tight_layout(rect=[0, 0.06, 1, 0.97])
+    
+    # Save the average F1 score heatmap
+    avg_heatmap_path = os.path.join(results_dir, 'average_f1_score_heatmap.png')
+    plt.savefig(avg_heatmap_path, dpi=300, bbox_inches='tight')
+    print(f"Average F1 score heatmap saved to {avg_heatmap_path}")
+    
+    plt.show()
+    
+    # Save best parameters
+    best_params = {
+        'VCO': float(best_threshold),
+        'range_check': int(best_range_check),
+        'performance': {
+            'f1_score': float(best_f1),
+            'accuracy': float(best_row['accuracy']),
+            'precision': float(best_row['precision']),
+            'recall': float(best_row['recall']),
+        }
+    }
+    
     import json
     with open(os.path.join(results_dir, 'best_parameters.json'), 'w') as f:
         json.dump(best_params, f, indent=4)
+    
+    print(f"\nBest average performance across {len(all_datasets_results)} datasets:")
+    print(f"  VCO: {best_threshold}")
+    print(f"  Range Check: {best_range_check}")
+    print(f"  Average F1 Score: {best_f1:.4f}")
 
     
 
