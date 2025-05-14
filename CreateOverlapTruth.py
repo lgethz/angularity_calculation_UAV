@@ -17,7 +17,7 @@ def main():
     ortho_path = "/Users/.../Orthomosaic.jpg"
     
     # Specify your outlines directory or file
-    outlines_path = "/Users/.../outline.tif"
+    outlines_path = "/Users/.../segmentation_data.tif"
     
     # Use orthomosaic for better visualization with outlines
     selector = create_ground_truth(ortho_path, outlines_path)
@@ -128,24 +128,53 @@ class BoundarySelector:
     
     def toggle_selection_mode(self, event):
         """Toggle between grain selection and lasso selection modes"""
+        # Store the current grain selection explicitly
+        current_grain = self.selected_grain
+        
+        # First explicitly disconnect click handler to prevent any canvas clicks
+        if hasattr(self, 'cid') and self.cid is not None:
+            self.fig.canvas.mpl_disconnect(self.cid)
+            self.cid = None
+            
         if self.selection_mode == "grain":
             self.selection_mode = "lasso"
             self.btn_mode.label.set_text('Mode: Lasso')
-            if self.selected_grain is not None:
+            
+            # ONLY activate lasso if a grain is selected
+            if current_grain is not None:
                 self.lasso.set_active(True)
         else:
             self.selection_mode = "grain"
             self.btn_mode.label.set_text('Mode: Grain')
             self.lasso.set_active(False)
-            # Note: We don't clear the grain selection here, allowing user to switch modes for the same grain
+            
+            # Reconnect the click event when returning to grain mode
+            self.cid = self.fig.canvas.mpl_connect('button_press_event', self.on_click)
+        
+        # Explicitly restore the grain selection
+        self.selected_grain = current_grain
+        
+        # Print for debugging
+        print(f"Mode changed to {self.selection_mode}, selected grain: {self.selected_grain}")
         
         self.update_status_text()
-        self.fig.canvas.draw_idle()
+        # Force redraw of all elements
+        self.update_display()
     
     def on_click(self, event):
         """Handle mouse clicks for grain selection"""
+        # Strict check: ONLY process clicks in grain selection mode
         if not event.inaxes or self.selection_mode != "grain":
             return
+        
+        # Skip clicks on UI elements (buttons)
+        if event.inaxes in [self.ax_mode, self.ax_save, self.ax_clear, 
+                            self.ax_undo, self.ax_rot90, self.ax_rot180, 
+                            self.ax_rot270, self.ax_flip_h, self.ax_flip_v, 
+                            self.ax_reset, self.ax_clear_grain]:
+            return
+        
+        # Rest of the function unchanged...
         
         # Disable the lasso temporarily if active
         lasso_was_active = self.lasso.active
