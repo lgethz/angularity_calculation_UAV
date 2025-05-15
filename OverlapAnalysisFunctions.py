@@ -11,6 +11,7 @@ from skimage.io import imsave
 from scipy import ndimage
 import glob
 from pathlib import Path
+from scipy.spatial import distance
 
 warnings.filterwarnings('ignore', category=NotGeoreferencedWarning)
 
@@ -130,36 +131,28 @@ def remove_edge_grains(outline, show_comparison=False):
     if outline.size == 0:
         raise ValueError("ERROR: Outline data is empty.")
     
-    # Get dimensions of the image
     height, width = outline.shape
     
-    # Extract all four borders
     top_border = outline[0, :]
     bottom_border = outline[height-1, :]
     left_border = outline[:, 0]
     right_border = outline[:, width-1]
     
-    # Combine all borders and find unique grain IDs
     all_border_pixels = np.concatenate([top_border, bottom_border, left_border, right_border])
     edge_grain_ids = np.unique(all_border_pixels)
-    edge_grain_ids = edge_grain_ids[edge_grain_ids > 0]  # Exclude background (0)
+    edge_grain_ids = edge_grain_ids[edge_grain_ids > 0] 
     
-    # Create a filtered copy of the outline
     filtered_outline = outline.copy()
     
-    # Count the grains before filtering
     original_grain_ids = np.unique(outline)
     original_grain_ids = original_grain_ids[original_grain_ids > 0]
     
-    # Remove edge-touching grains
     for grain_id in edge_grain_ids:
         filtered_outline[filtered_outline == grain_id] = 0
     
-    # Count the grains after filtering
     remaining_grain_ids = np.unique(filtered_outline)
     remaining_grain_ids = remaining_grain_ids[remaining_grain_ids > 0]
     
-    # Print statistics
     removed_count = len(edge_grain_ids)
     total_count = len(original_grain_ids)
     remaining_count = len(remaining_grain_ids)
@@ -168,7 +161,6 @@ def remove_edge_grains(outline, show_comparison=False):
     print(f"Removed IDs: {edge_grain_ids[:10]}{'...' if len(edge_grain_ids) > 10 else ''}")
     print(f"Remaining grains: {remaining_count}")
     
-    # Show comparison if requested
     if show_comparison:
         plt.figure(figsize=(16, 8))
         
@@ -182,9 +174,117 @@ def remove_edge_grains(outline, show_comparison=False):
         plt.title(f"Clasts Remaining\n({remaining_count} clasts)")
         plt.colorbar(label='Grain ID')
         
-        # Highlight removed grains in the original image
         removed_mask = np.zeros_like(outline, dtype=bool)
         for grain_id in edge_grain_ids:
+            removed_mask = removed_mask | (outline == grain_id)
+        
+        plt.subplot(1, 2, 1)
+        plt.imshow(removed_mask, cmap='autumn', alpha=0.3)
+        
+        plt.tight_layout()
+        plt.show()
+    
+    return filtered_outline
+
+
+def remove_small_grains(outline, min_pcd=None, show_comparison=False):
+    """
+    Removes grains that are smaller than a specified pixel count diameter (PCD).
+    
+    Parameters:
+        outline: NumPy array where each pixel value represents a grain ID (0 = background)
+        min_pcd: Minimum PCD to keep a grain, if None will prompt user
+        show_comparison: If True, displays a before/after comparison visualization
+    
+    Returns:
+        filtered_outline: NumPy array with small grains removed (set to 0)
+    """
+    if not isinstance(outline, np.ndarray):
+        raise ValueError("ERROR: Outline data is not a valid NumPy array.")
+    
+    if outline.size == 0:
+        raise ValueError("ERROR: Outline data is empty.")
+    
+    grain_boundaries = find_boundaries(outline)
+
+    pcd_results = {}
+    pcd_points = {} 
+    
+    for grain_id, contours in grain_boundaries.items():
+        if grain_id == 0:
+            continue
+        
+        max_length = 0
+        longest_contour = None
+        for contour in contours:
+            if len(contour) > max_length:
+                max_length = len(contour)
+                longest_contour = contour
+        
+        if longest_contour is not None:
+            distances = distance.pdist(longest_contour)
+            
+            if len(distances) > 0:
+                square_distances = distance.squareform(distances)
+                i, j = np.unravel_index(np.argmax(square_distances), square_distances.shape)
+                max_distance = square_distances[i, j]
+                
+                pcd_results[grain_id] = max_distance
+                pcd_points[grain_id] = (longest_contour[i], longest_contour[j])
+    
+    grain_ids = list(pcd_results.keys())
+    pcd_values = list(pcd_results.values())
+    
+    if len(pcd_values) > 0:
+        print(f"PCD Statistics:")
+        print(f"  Min: {min(pcd_values):.2f} pixels")
+        print(f"  Max: {max(pcd_values):.2f} pixels")
+        print(f"  Mean: {np.mean(pcd_values):.2f} pixels")
+        print(f"  Median: {np.median(pcd_values):.2f} pixels")
+    
+    if min_pcd is None:
+        min_pcd = float(input(f"Enter minimum PCD to keep (in pixels): "))
+    
+    small_grain_ids = [grain_id for grain_id, pcd in pcd_results.items() if pcd < min_pcd]
+    
+    filtered_outline = outline.copy()
+    
+    for grain_id in small_grain_ids:
+        filtered_outline[filtered_outline == grain_id] = 0
+    
+    original_grain_ids = np.unique(outline)
+    original_grain_ids = original_grain_ids[original_grain_ids > 0]
+    
+    remaining_grain_ids = np.unique(filtered_outline)
+    remaining_grain_ids = remaining_grain_ids[remaining_grain_ids > 0]
+    
+    removed_count = len(small_grain_ids)
+    total_count = len(original_grain_ids)
+    remaining_count = len(remaining_grain_ids)
+    
+    print(f"Removed {removed_count} grains smaller than {min_pcd:.2f} pixels PCD")
+    print(f"Original grains: {total_count}")
+    print(f"Remaining grains: {remaining_count}")
+    
+    if show_comparison:
+        plt.figure(figsize=(16, 8))
+        
+        plt.subplot(1, 2, 1)
+        plt.imshow(outline, cmap='viridis')
+        plt.title(f"Original Segmentation\n({total_count} grains)")
+        plt.colorbar(label='Grain ID')
+        
+        for grain_id, points in pcd_points.items():
+            point1, point2 = points
+            plt.plot([point1[1], point2[1]], [point1[0], point2[0]], 'r-', linewidth=1)
+        
+        plt.subplot(1, 2, 2)
+        plt.imshow(filtered_outline, cmap='viridis')
+        plt.title(f"Grains Remaining\n({remaining_count} grains, min PCD={min_pcd:.2f})")
+        plt.colorbar(label='Grain ID')
+        
+        removed_mask = np.zeros_like(outline, dtype=bool)
+        for grain_id in small_grain_ids:
             removed_mask = removed_mask | (outline == grain_id)
         
         plt.subplot(1, 2, 1)
@@ -792,6 +892,12 @@ def process_folder(dem_folder, outline_folder, range_check, VCO,
     dem_files = glob.glob(os.path.join(dem_folder, "*.tif"))
     print(f"Found {len(dem_files)} DEM files to process")
     user_input = input("Do you want to exclude edge clasts? (yes/no): ").strip().lower()
+    user_input_min_grains = input("Do you want to remove small grains? (yes/no): ").strip().lower()
+
+    if user_input_min_grains == "yes":
+        min_pcd = float(input("Enter minimum PCD to keep (in pixels): "))
+    else:
+        min_pcd = None
     
     for dem_path in dem_files:
         dem_basename = os.path.basename(dem_path)
@@ -826,7 +932,7 @@ def process_folder(dem_folder, outline_folder, range_check, VCO,
         csv_folder = os.path.join(image_output_folder, "csv")
         csv_path = os.path.join(csv_folder, "overlap_points.csv")
         
-        print(f"\n\n===== Processing {dem_name} =====")
+        print(f"\n\n===== Processing {dem_name} and outline =====")
         
         print("=== Running Python Overlap Analysis ===")
         dem = load_dem(dem_path)
@@ -841,6 +947,9 @@ def process_folder(dem_folder, outline_folder, range_check, VCO,
             outline = load_outline(outline_path)
             if user_input == "yes":
                 outline = remove_edge_grains(outline, show_comparison=False)
+
+        if user_input_min_grains == "yes":
+            outline = remove_small_grains(outline, min_pcd=min_pcd, show_comparison=False)
             
         
         grain_boundaries = find_boundaries(outline)
@@ -966,7 +1075,11 @@ def process_single_picture(dem_path, outline_path, range_check: int = 5, VCO: fl
             outline = remove_edge_grains(outline, show_comparison=True)
         if user_input_tif == "no":
             show_outline(outline)
-        
+
+    input_user_min_grains = input("Do you want to remove small grains? (yes/no): ").strip().lower()
+    if input_user_min_grains == "yes":
+        min_pcd = float(input("Enter minimum PCD to keep (in pixels): "))
+        outline = remove_small_grains(outline, min_pcd=min_pcd, show_comparison=True)    
     
     grain_boundaries = find_boundaries(outline)
     plot_boundaries_on_dem(dem, grain_boundaries, outline)

@@ -32,6 +32,7 @@ June 2025
 - Produces detailed angularity metrics accounting for overlap
 - Supports multi-resolution analysis with automatic coordinate transformation
 - Calculates Pixel Count Diameter (PCD) for grain size quantification
+- Filters out small grains based on minimum PCD threshold
 
 
 ## External Code Attribution
@@ -110,7 +111,8 @@ Data Loading & Preprocessing:
 1. Loads DEM and segmentation data
 2. Automatically detects resolution differences and scaling factors
 3. Removes edge grains (optional) to avoid boundary artifacts
-4. Creates a coordinate transformation system for multi-resolution analysis
+4. Filters out small grains based on PCD threshold (optional)
+5. Creates a coordinate transformation system for multi-resolution analysis
 
 Boundary & Overlap Detection:
 1. Extracts grain boundaries using contour detection
