@@ -1,17 +1,17 @@
-from OverlapAnalysisFunctions import process_single_picture
+from OverlapAnalysisFunctions import process_single_picture, process_folder
 import os
 import datetime
 import glob
 
 # Define optimized parameters for 2000x2000 pixel images
-VCO = 0.001  # Recommended VCO for overlap analysis in meters
-range_check = 5    # Recommended range for overlap analysis in pixels
+VCO = 1000  # Recommended VCO for overlap analysis in meters
+range_check = 4    # Recommended range for overlap analysis in pixels
 
 # MATLAB parameters 
-matlab_tol = 0.05      # Forming straight lines to the boundary
+matlab_tol = 0.015      # Forming straight lines to the boundary
 matlab_factor = 0.98   # Fitting small circles 
 matlab_span = 0.07     # Nonparametric fitting
-matlab_exclusion_range = 22  # Radius for filtering convex points near overlaps
+matlab_exclusion_range = 3  # Radius for filtering convex points near overlaps
 
 
 # Create timestamped output folder to keep analyses separate
@@ -22,7 +22,7 @@ output_base = f"./overlap_output_{timestamp}"
 input_dem_path = "/Users/.../DEM.tif"
 input_outline_path = "/Users/.../Outline.npy"
 input_dem_folder = "/Users/.../DEM"
-input_outline_folder = "/Users/.../Outline"
+input_outline_folder = "/Users/.../NPY"
 
 try:
     # Print header
@@ -64,8 +64,8 @@ try:
         if confirmation == "yes":
             # Get all files from each folder
             dem_files = sorted(glob.glob(os.path.join(input_dem_folder, "*.tif")))
-            outline_files = sorted(glob.glob(os.path.join(input_outline_folder, "*.npy")))
-            
+            outline_files = sorted(glob.glob(os.path.join(input_outline_folder, "*.npy"))) + \
+               sorted(glob.glob(os.path.join(input_outline_folder, "*.tif")))
             print(f"Found {len(dem_files)} DEM files")
             print(f"Found {len(outline_files)} outline files")
             
@@ -73,17 +73,19 @@ try:
             num_pairs = min(len(dem_files), len(outline_files))
             print(f"Will process {num_pairs} file pairs")
             
-            # Process each pair
-            for i in range(num_pairs):
-                dem_path = dem_files[i]
-                outline_path = outline_files[i]
-                
-                print(f"\n===== Processing pair {i+1}/{num_pairs} =====")
-                print(f"DEM: {os.path.basename(dem_path)}")
-                print(f"Outline: {os.path.basename(outline_path)}")
-                
-                # Process this pair
-                process_single_picture(dem_path, outline_path, range_check, VCO, output_base)
+            # With this single function call:
+            process_folder(
+                input_dem_folder, 
+                input_outline_folder, 
+                range_check, 
+                VCO,
+                matlab_tol=matlab_tol,
+                matlab_factor=matlab_factor,
+                matlab_span=matlab_span,
+                matlab_exclusion_range=matlab_exclusion_range,
+                output_base=output_base,
+                show_visualizations=False  
+)
                 
             print(f"\nCompleted processing {num_pairs} image pairs")
         else:

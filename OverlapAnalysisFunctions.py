@@ -12,6 +12,7 @@ from scipy import ndimage
 import glob
 from pathlib import Path
 from scipy.spatial import distance
+import re
 
 warnings.filterwarnings('ignore', category=NotGeoreferencedWarning)
 
@@ -38,11 +39,16 @@ def load_dem(file_path: str):
     return dem
 
 
-def show_dem(dem):
+def show_dem(dem, output_path=None, show = True, close_after = False):
     """
     Visualizes the Digital Elevation Model using matplotlib with a rainbow colormap.
 
-    Parameters: NumPy array containing the DEM data
+    Parameters: 
+        dem: NumPy array containing the DEM data
+        output_path: If provided, saves the visualization to this path
+        show: Whether to display the plot (default=True)
+        close_after: Whether to close the plot after showing (default=False)
+
     Visualization: Creates a figure with colorbar showing elevation values
     """
     try:
@@ -51,8 +57,17 @@ def show_dem(dem):
         plt.colorbar()
         plt.title("Digital Elevation Model")
         plt.gcf().canvas.toolbar.zoom()
-        plt.show()
-    
+
+        if output_path:
+            plt.savefig(output_path, dpi=300, bbox_inches='tight')
+            print(f"Saved DEM visualization to {output_path}")
+        
+        if show:
+            plt.show()
+
+        if close_after:
+            plt.close()
+
     except dem is None:
         raise ValueError("ERROR: DEM data is None. Please check the file path or format.")
 
@@ -114,7 +129,7 @@ def load_outline(file_path: str, show_ids=True):
     except ValueError as e:
         raise ValueError(f"ERROR: Invalid raster format: {str(e)}")
 
-def remove_edge_grains(outline, show_comparison=False):
+def remove_edge_grains(outline, show_comparison=False, close_after = False):
     """
     Identifies and removes grains that touch the edge of the image.
     
@@ -183,11 +198,14 @@ def remove_edge_grains(outline, show_comparison=False):
         
         plt.tight_layout()
         plt.show()
+
+        if close_after:
+            plt.close()
     
     return filtered_outline
 
 
-def remove_small_grains(outline, min_pcd=None, show_comparison=False):
+def remove_small_grains(outline, min_pcd=None, show_comparison=False, close_after = False):
     """
     Removes grains that are smaller than a specified pixel count diameter (PCD).
     
@@ -292,33 +310,42 @@ def remove_small_grains(outline, min_pcd=None, show_comparison=False):
         
         plt.tight_layout()
         plt.show()
+        
+        if close_after:
+            plt.close()
     
     return filtered_outline
 
 
-def show_outline(outline):
+def show_outline(outline, output_path=None, show=True, close_after=False):
     """ 
     Visualizes the grain segmentation image using matplotlib with a rainbow colormap.
 
-    Parameters: NumPy array containing grain segmentation data
-    Visualization: Creates a figure with colorbar showing grain IDs
+    Parameters: 
+        outline: NumPy array containing grain segmentation data
+        output_path: If provided, saves the visualization to this path
+        show: Whether to display the plot (default=True)
+        close_after: Whether to close the plot after showing (default=False)
     """
     try:
         plt.figure(figsize=(10, 10))
         plt.imshow(outline, cmap='rainbow')  # or 'jet'
-        plt.colorbar()
-        plt.title("Analysed Image with ImageGrains")
+        plt.colorbar(label='Grain ID')
+        plt.title("Grain segmentation data")
         plt.gcf().canvas.toolbar.zoom()
-        plt.show()
+        
+        if output_path:
+            plt.savefig(output_path, dpi=300, bbox_inches='tight')
+            print(f"Saved outline visualization to {output_path}")
+            
+        if show:
+            plt.show()
+            
+        if close_after:
+            plt.close()
     
-    except outline is None:
-        raise ValueError("ERROR: DEM data is None. Please check the file path or format.")
-
-    except not isinstance(outline, np.ndarray):
-        raise ValueError("ERROR: DEM data is not a valid NumPy array. Please check the file format.")
-    
-    except outline.size == 0:
-        raise ValueError("ERROR: DEM data is empty. Please check the file path or format.")
+    except Exception as e:
+        raise ValueError(f"ERROR visualizing outline: {str(e)}")
 
 
 def create_coordinate_transformer(dem, outline):
@@ -412,12 +439,18 @@ def find_boundaries(outline):
      return grain_boundaries
 
 
-def plot_boundaries_on_dem(dem, grain_boundaries, outline = None):
+def plot_boundaries_on_dem(dem, grain_boundaries, outline = None, output_path = None, show = True, close_after = False):
     """
     Plots the grain boundaries on top of the DEM for visualization.
 
     Parameters: 
-        DEM array and grain boundaries dictionary
+        dem: DEM array
+        grain_boundaries: Dictionary of grain contours
+        outline: Optional segmentation data for coordinate transformation
+        output_path: If provided, saves the visualization to this path
+        show: Whether to display the plot (default=True)
+        close_after: Whether to close the plot after showing (default=False)
+
     Visualization: 
         Creates a plot with DEM as background and grain boundaries overlaid
     """
@@ -461,7 +494,16 @@ def plot_boundaries_on_dem(dem, grain_boundaries, outline = None):
     
     plt.title("Grain Boundaries on DEM")
     plt.colorbar(label='Elevation')
-    plt.show()
+    
+    if output_path:
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        print(f"Saved boundaries visualization to {output_path}")
+        
+    if show:
+        plt.show()
+        
+    if close_after:
+        plt.close()
 
 
 def analyse_overlap(grain_boundaries, DEM, outline, range_check: int = 5, VCO: int = 0.002):
@@ -583,7 +625,7 @@ def analyse_overlap(grain_boundaries, DEM, outline, range_check: int = 5, VCO: i
     return overlap_results
 
 
-def visualize_overlap(overlap_results, grain_boundaries, outline):
+def visualize_overlap(overlap_results, grain_boundaries, outline, output_path = None, show = True, close_after = False):
     """
     Creates a visualization showing grain boundaries and detected overlap points.
 
@@ -629,7 +671,16 @@ def visualize_overlap(overlap_results, grain_boundaries, outline):
     
     plt.title("Overlap Points on Grain Boundaries")
     plt.colorbar(label='Grain ID')
-    plt.show()
+    
+    if output_path:
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        print(f"Saved overlap visualization to {output_path}")
+        
+    if show:
+        plt.show()
+        
+    if close_after:
+        plt.close()
 
 
 def save_grain_images_and_overlap_csv(overlap_results, outline, output_folder : str = "./overlap_output"):
@@ -878,7 +929,8 @@ def visualize_normal_vectors(grain_boundaries, outline, sample_rate=10):
 
 def process_folder(dem_folder, outline_folder, range_check, VCO, 
                   matlab_tol=0.05, matlab_factor=0.98, matlab_span=0.07, 
-                  matlab_exclusion_range=22, output_base="./overlap_output"):
+                  matlab_exclusion_range=5, output_base="./overlap_output",
+                  show_visualizations=False, min_pcd=None):
     """
     Process all DEM and outline files in the specified folders.
     
@@ -888,45 +940,56 @@ def process_folder(dem_folder, outline_folder, range_check, VCO,
         range_check: Range to check for overlaps in pixels
         VCO: Elevation VCO for overlap detection
         output_base: Base output directory
+        show_visualizations: Whether to display images during processing (default=False)
+        min_pcd: Minimum PCD to keep grains (if None, will prompt user)
     """
-    dem_files = glob.glob(os.path.join(dem_folder, "*.tif"))
-    print(f"Found {len(dem_files)} DEM files to process")
-    user_input = input("Do you want to exclude edge clasts? (yes/no): ").strip().lower()
-    user_input_min_grains = input("Do you want to remove small grains? (yes/no): ").strip().lower()
+    dem_files = sorted(glob.glob(os.path.join(dem_folder, "*.tif")))
+    outline_files_npy = sorted(glob.glob(os.path.join(outline_folder, "*.npy")))
+    outline_files_tif = sorted(glob.glob(os.path.join(outline_folder, "*.tif")))
+    outline_files = outline_files_npy + outline_files_tif
 
-    if user_input_min_grains == "yes":
-        min_pcd = float(input("Enter minimum PCD to keep (in pixels): "))
-    else:
-        min_pcd = None
+    print(f"Found {len(dem_files)} DEM files")
+    print(f"Found {len(outline_files)} outline files")
+
+    num_pairs = min(len(dem_files), len(outline_files))
+    print(f"Will process {num_pairs} file pairs")
+
+    user_input = input("Do you want to exclude edge clasts? (yes/no): ").strip().lower()
     
-    for dem_path in dem_files:
+    if min_pcd is None:
+        user_input_min_grains = input("Do you want to remove small clasts? (yes/no): ").strip().lower()
+        if user_input_min_grains == "yes":
+            min_pcd = float(input("Enter minimum PCD to keep (in pixels): "))
+        else:
+            min_pcd = None
+    
+    for i in range(num_pairs):
+        dem_path = dem_files[i]
+        outline_path = outline_files[i]
+        
         dem_basename = os.path.basename(dem_path)
+        outline_basename = os.path.basename(outline_path)
         dem_name = os.path.splitext(dem_basename)[0]
         
-        outline_pattern_npy = os.path.join(outline_folder, f"{dem_name}*.npy")
-        outline_pattern_tif = os.path.join(outline_folder, f"{dem_name}*.tif")
+        print(f"\n\n===== Processing pair {i+1}/{num_pairs} =====")
+        print(f"DEM file: {dem_basename}")
+        print(f"Outline file: {outline_basename}")
         
-        outline_matches_npy = glob.glob(outline_pattern_npy)
-        outline_matches_tif = glob.glob(outline_pattern_tif)
-        
-        if outline_matches_npy:
-            outline_path = outline_matches_npy[0]
+        # Determine file format based on extension
+        if outline_path.lower().endswith('.npy'):
             file_format = "NPY"
-            if len(outline_matches_npy) > 1:
-                print(f"Multiple NPY matches found for {dem_basename}, using: {os.path.basename(outline_path)}")
-        elif outline_matches_tif:
-            outline_path = outline_matches_tif[0]
+        elif outline_path.lower().endswith('.tif'):
             file_format = "TIF"
-            if len(outline_matches_tif) > 1:
-                print(f"Multiple TIF matches found for {dem_basename}, using: {os.path.basename(outline_path)}")
         else:
-            print(f"No matching outline file found for {dem_basename}, skipping...")
+            print(f"Unknown outline file format for {outline_basename}, skipping...")
             continue
         
-        print(f"Using {file_format} file for {dem_basename}: {os.path.basename(outline_path)}")
-        
+        print(f"Using {file_format} file: {outline_basename}")
         image_output_folder = os.path.join(output_base, dem_name)
         os.makedirs(image_output_folder, exist_ok=True)
+
+        vis_folder = os.path.join(image_output_folder, "visualizations")
+        os.makedirs(vis_folder, exist_ok=True)
         
         images_folder = os.path.join(image_output_folder, "images")
         csv_folder = os.path.join(image_output_folder, "csv")
@@ -936,32 +999,49 @@ def process_folder(dem_folder, outline_folder, range_check, VCO,
         
         print("=== Running Python Overlap Analysis ===")
         dem = load_dem(dem_path)
-        show_dem(dem)
+        dem_vis_path = os.path.join(vis_folder, "dem.png")
+        show_dem(dem, output_path=dem_vis_path, show=show_visualizations, close_after=True)
         
         if file_format == "NPY":
             outline = read_npy_file(outline_path)
-            if user_input == "yes":
-                outline = remove_edge_grains(outline, show_comparison=False)
-
-        else: 
-            outline = load_outline(outline_path)
-            if user_input == "yes":
-                outline = remove_edge_grains(outline, show_comparison=False)
-
-        if user_input_min_grains == "yes":
-            outline = remove_small_grains(outline, min_pcd=min_pcd, show_comparison=False)
+            outline_vis_path = os.path.join(vis_folder, "original_outline.png")
+            show_outline(outline, output_path=outline_vis_path, show=show_visualizations, close_after=True)
             
+            if user_input == "yes":
+                outline = remove_edge_grains(outline, show_comparison=show_visualizations, close_after=True)
+                filtered_outline_vis_path = os.path.join(vis_folder, "filtered_outline_excluded_edge_clasts.png")
+                show_outline(outline, output_path=filtered_outline_vis_path, show=show_visualizations, close_after=True)
+
+                if user_input_min_grains == "yes":
+                    outline = remove_small_grains(outline, min_pcd=min_pcd, show_comparison=show_visualizations, close_after=True)
+                    filtered_outline_vis_path = os.path.join(vis_folder, "filtered_outline_excluded_small_clasts.png")
+                    show_outline(outline, output_path=filtered_outline_vis_path, show=show_visualizations, close_after=True)
         
+        elif file_format == "TIF":
+            outline = load_outline(outline_path, show_ids = False)
+            outline_vis_path = os.path.join(vis_folder, "original_outline.png")
+            show_outline(outline, output_path=outline_vis_path, show=show_visualizations, close_after=True)
+            
+            if user_input == "yes":
+                outline = remove_edge_grains(outline, show_comparison=show_visualizations, close_after=True)
+                filtered_outline_vis_path = os.path.join(vis_folder, "filtered_outline_excluded_edge_clasts.png")
+                show_outline(outline, output_path=filtered_outline_vis_path, show=show_visualizations, close_after=True)
+
+                if user_input_min_grains == "yes":
+                    outline = remove_small_grains(outline, min_pcd=min_pcd, show_comparison=show_visualizations, close_after=True)
+                    filtered_outline_vis_path = os.path.join(vis_folder, "filtered_outline_excluded_small_clasts.png")
+                    show_outline(outline, output_path=filtered_outline_vis_path, show=show_visualizations, close_after=True)
+
         grain_boundaries = find_boundaries(outline)
-        plot_boundaries_on_dem(dem, grain_boundaries, outline)
+        boundaries_vis_path = os.path.join(vis_folder, "boundaries_on_dem.png")
+        plot_boundaries_on_dem(dem, grain_boundaries, outline, 
+                              output_path=boundaries_vis_path, show=show_visualizations, close_after=True)
         
         overlap_results = analyse_overlap(grain_boundaries, dem, outline, range_check, VCO)
-        visualize_overlap(overlap_results, grain_boundaries, outline)
+        overlap_vis_path = os.path.join(vis_folder, "overlap_points.png")
+        visualize_overlap(overlap_results, grain_boundaries, outline,
+                         output_path=overlap_vis_path, show=show_visualizations, close_after=True)
         
-        user_input = input(f"\nDo you want to proceed with analysis of {dem_name}? (yes/no): ").strip().lower()
-        if user_input != "yes":
-            print(f"Analysis of {dem_name} skipped by user.")
-            continue
         
         print(f"\n=== Saving grain images and overlap points to {image_output_folder} ===")
         save_grain_images_and_overlap_csv(overlap_results, outline, image_output_folder)
@@ -1034,7 +1114,7 @@ def process_folder(dem_folder, outline_folder, range_check, VCO,
 
 def process_single_picture(dem_path, outline_path, range_check: int = 5, VCO: float = 0.002, 
                           matlab_tol: float = 0.05, matlab_factor: float = 0.98, 
-                          matlab_span: float = 0.07, matlab_exclusion_range: int = 22, 
+                          matlab_span: float = 0.07, matlab_exclusion_range: int = 5, 
                           output_folder: str = "./overlap_output"):    
     """
     Process a single DEM and outline file.
@@ -1051,6 +1131,9 @@ def process_single_picture(dem_path, outline_path, range_check: int = 5, VCO: fl
     
     image_output_folder = os.path.join(output_folder, dem_name)
     os.makedirs(image_output_folder, exist_ok=True)
+
+    vis_folder = os.path.join(image_output_folder, "visualizations")
+    os.makedirs(vis_folder, exist_ok=True)
     
     images_folder = os.path.join(image_output_folder, "images")
     csv_folder = os.path.join(image_output_folder, "csv")
@@ -1058,34 +1141,57 @@ def process_single_picture(dem_path, outline_path, range_check: int = 5, VCO: fl
     
     print("=== Running Python Overlap Analysis ===")
     dem = load_dem(dem_path)
-    show_dem(dem)
+    dem_vis_path = os.path.join(vis_folder, "dem.png")
+    show_dem(dem, output_path=dem_vis_path)
     
     if outline_path.lower().endswith('.npy'):
-        outline = read_npy_file(outline_path)
-        user_input_npy = input(f"Would you like to exclude the grains that touch the image edge? (yes/no): ").strip().lower()
-        if user_input_npy == "yes":
-            outline = remove_edge_grains(outline, show_comparison=True)
-        if user_input_npy == "no":
-            show_outline(outline)
+            outline = read_npy_file(outline_path)
+            # Save outline visualization
+            outline_vis_path = os.path.join(vis_folder, "outline.png")
+            show_outline(outline, output_path=outline_vis_path)
+            
+            user_input_npy = input(f"Would you like to exclude the grains that touch the image edge? (yes/no): ").strip().lower()
+            if user_input_npy == "yes":
+                outline = remove_edge_grains(outline, show_comparison=True)
+                # Save filtered outline
+                filtered_vis_path = os.path.join(vis_folder, "filtered_outline.png")
+                show_outline(outline, output_path=filtered_vis_path)
 
-    else:
-        outline = load_outline(outline_path)
-        user_input_tif = input(f"Would you like to exclude the grains that touch the image edge? (yes/no): ").strip().lower()
-        if user_input_tif == "yes":
-            outline = remove_edge_grains(outline, show_comparison=True)
-        if user_input_tif == "no":
-            show_outline(outline)
+            input_user_min_grains = input("Do you want to remove small grains? (yes/no): ").strip().lower()
+            if input_user_min_grains == "yes":
+                min_pcd = float(input("Enter minimum PCD to keep (in pixels): "))
+                outline = remove_small_grains(outline, min_pcd=min_pcd, show_comparison=True)
+                small_filtered_vis_path = os.path.join(vis_folder, "filtered_outline_small_clasts.png")
+                show_outline(outline, output_path=small_filtered_vis_path)
 
-    input_user_min_grains = input("Do you want to remove small grains? (yes/no): ").strip().lower()
-    if input_user_min_grains == "yes":
-        min_pcd = float(input("Enter minimum PCD to keep (in pixels): "))
-        outline = remove_small_grains(outline, min_pcd=min_pcd, show_comparison=True)    
+
+    elif outline_path.lower().endswith('.tif'):
+            outline = load_outline(outline_path)
+            # Save outline visualization
+            outline_vis_path = os.path.join(vis_folder, "outline.png")
+            show_outline(outline, output_path=outline_vis_path)
+            user_input_npy = input(f"Would you like to exclude the grains that touch the image edge? (yes/no): ").strip().lower()
+
+            if user_input_npy == "yes":
+                outline = remove_edge_grains(outline, show_comparison=True)
+                filtered_vis_path = os.path.join(vis_folder, "filtered_outline.png")
+                show_outline(outline, output_path=filtered_vis_path)
+            
+            input_user_min_grains = input("Do you want to remove small grains? (yes/no): ").strip().lower()
+            if input_user_min_grains == "yes":
+                min_pcd = float(input("Enter minimum PCD to keep (in pixels): "))
+                outline = remove_small_grains(outline, min_pcd=min_pcd, show_comparison=True)
+                small_filtered_vis_path = os.path.join(vis_folder, "filtered_outline_small_clasts.png")
+                show_outline(outline, output_path=small_filtered_vis_path)
+
     
     grain_boundaries = find_boundaries(outline)
-    plot_boundaries_on_dem(dem, grain_boundaries, outline)
+    boundaries_vis_path = os.path.join(vis_folder, "boundaries_on_dem.png")
+    plot_boundaries_on_dem(dem, grain_boundaries, outline, output_path=boundaries_vis_path)
     
     overlap_results = analyse_overlap(grain_boundaries, dem, outline, range_check, VCO)
-    visualize_overlap(overlap_results, grain_boundaries, outline)
+    overlap_vis_path = os.path.join(vis_folder, "overlap_points.png")
+    visualize_overlap(overlap_results, grain_boundaries, outline, output_path=overlap_vis_path)
     
     user_input = input("\nDo you want to proceed with saving and MATLAB analysis? (yes/no): ").strip().lower()
     if user_input != "yes":

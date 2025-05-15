@@ -172,7 +172,7 @@ if ~isempty(grain_overlap) && height(grain_overlap) > 0
             ox = grain_overlap.X(j);
             oy = grain_overlap.Y(j);
             
-            % If point is within 5 pixels of an overlap point, exclude it
+            % If point is within the exclusion range, mark it as overlap
             if sqrt((px-ox)^2 + (py-oy)^2) < exclusion_range
                 is_overlap = true;
                 break;
