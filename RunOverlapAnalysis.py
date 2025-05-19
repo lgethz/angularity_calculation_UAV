@@ -4,8 +4,8 @@ import datetime
 import glob
 
 # Define optimized parameters for 2000x2000 pixel images
-VCO = 1000  # Recommended VCO for overlap analysis in meters
-range_check = 4    # Recommended range for overlap analysis in pixels
+VCO = 0.01  # Recommended VCO for overlap analysis in meters
+range_check = 5    # Recommended range for overlap analysis in pixels
 
 # MATLAB parameters 
 matlab_tol = 0.015      # Forming straight lines to the boundary
