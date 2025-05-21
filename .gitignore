@@ -21,3 +21,8 @@ pcd_output*/
 
 # Ignore all parameter analysis results
 parameter_analysis*/
+*parameter_analysis_results.csv
+parameter_analysis_results_*/
+*visualization_*.png
+*f1_score_heatmap.png
+*confusion_matrix_*.png

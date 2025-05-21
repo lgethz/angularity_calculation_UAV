@@ -16,6 +16,18 @@ Bachelor Thesis Project
 ETH Zürich  
 June 2025
 
+## External Code Attribution
+This project incorporates modified MATLAB code from:
+
+**Junxing Zheng, University of Michigan, Ann Arbor (2015)**  
+The angularity calculation is based on code originally developed by Junxing Zheng and R.D. Hryciw, with modifications to handle grain overlap regions.
+
+**Citation:**  
+Zheng, J., and Hryciw, R.D. (2015). "Traditional Soil Particle Sphericity, Roundness and Surface Roughness by Computational Geometry", Geotechnique, Vol. 65, No. 6, 494-506, DOI:10.1680/geot./14-P-192.
+
+**License:**  
+The original code is distributed under a BSD license. See the LICENSE.txt file in the MatlabZheng2015 directory for details.
+
 ------------------------------------------------------------
 
 ## Features
@@ -34,18 +46,6 @@ June 2025
 - Calculates Pixel Count Diameter (PCD) for grain size quantification
 - Filters out small grains based on minimum PCD threshold
 
-
-## External Code Attribution
-This project incorporates modified MATLAB code from:
-
-**Junxing Zheng, University of Michigan, Ann Arbor (2015)**  
-The angularity calculation is based on code originally developed by Junxing Zheng and R.D. Hryciw, with modifications to handle grain overlap regions.
-
-**Citation:**  
-Zheng, J., and Hryciw, R.D. (2015). "Traditional Soil Particle Sphericity, Roundness and Surface Roughness by Computational Geometry", Geotechnique, Vol. 65, No. 6, 494-506, DOI:10.1680/geot./14-P-192.
-
-**License:**  
-The original code is distributed under a BSD license. See the LICENSE.txt file in the MatlabZheng2015 directory for details.
 
 ## Dependencies
 - numpy
@@ -86,8 +86,9 @@ The original code is distributed under a BSD license. See the LICENSE.txt file i
      python setup.py install
      ```
 
+------------------------------------------------------------
 
-## Running the Analysis
+## Running the Main Analysis
 The main script to run the complete analysis is `RunOverlapAnalysis.py`. This script:
 
 Input Requirements
@@ -143,27 +144,33 @@ Aggregates individual grain results
 ------------------------------------------------------------
 
 ## Parameter Optimization Tools
-The Analysis_threshold_and_range directory contains tools for optimizing the detection parameters (threshold and range_check) to improve accuracy and precision of overlap detection:
 
-# CreateOverlapTruth.py
+The project includes several tools for optimizing detection parameters:
+
+### CreateOverlapTruth.py
 This interactive tool allows users to manually create ground truth data for overlap regions:
+- Loads DEM and grain segmentation data
+- Provides an interactive interface for selecting grains
+- Uses lasso selection to mark actual overlap points (ground truth)
+- Exports ground truth data to CSV for parameter optimization
+- Supports image transformations and multiple selection modes
 
-1. Loads DEM and grain segmentation data
-2. Provides an interactive interface for selecting grains
-3. Uses lasso selection to mark actual overlap points (ground truth)
-4. Exports ground truth data to CSV for parameter optimization
-5. Supports image transformations and multiple selection modes
-
-# AnalyseParameters.py
+### AnalyseParameters.py
 This script analyzes different combinations of threshold and range_check parameters to determine optimal values:
+- Tests multiple parameter combinations against ground truth data
+- Calculates accuracy, precision, recall, and F1 scores using confusion matrices
+- Generates heatmaps and visualizations of performance metrics
+- Identifies the best parameter settings for different optimization goals
+- Outputs comprehensive analysis results to CSV and image files
 
-1. Tests multiple parameter combinations against ground truth data
-2. Calculates accuracy, precision, recall, and F1 scores using confusion matrices
-3. Generates heatmaps and visualizations of performance metrics
-4. Identifies the best parameter settings for different optimization goals
-5. Outputs comprehensive analysis results to CSV and image files
-
-These parameter optimization tools enable users to fine-tune the overlap detection algorithm for specific types of grain imagery and elevation data, resulting in more accurate angularity calculations.
+### VCO_rangecheck_analysis.py
+This script enables batch processing of multiple datasets to find the optimal parameters of VCO and range check:
+- Analyzes one dataset at a time
+- Calculates F1 scores for each VCO and range_check combination
+- Generates averaged performance metrics across all datasets
+- Creates heatmap visualizations showing parameter sensitivity
+- Identifies globally optimal parameters that work well across diverse samples using the F1-score
+- Exports comprehensive results and visualizations for parameter selection
 
 ------------------------------------------------------------
 
