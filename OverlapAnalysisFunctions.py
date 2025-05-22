@@ -597,7 +597,7 @@ def analyse_overlap(grain_boundaries, DEM, outline, range_check: int = 5, VCO: i
                             dem_y, dem_x = outline_to_dem(y,x) # transform the coordinates to the DEM coordinates
                             boundary_elevation = DEM[int(dem_y), int(dem_x)] # get the elevation of the boundary point
 
-                            for d in range(1, range_check): # check for overlap in the range of the normal vector (1 to range_check away from the point in the direction of the normal vector)
+                            for d in range(1, range_check+1): # check for overlap in the range of the normal vector (1 to range_check away from the point in the direction of the normal vector)
                                 sample_outline_y = int(round(y + d * normal_y))
                                 sample_outline_x = int(round(x + d * normal_x))
                                 sample_dem_y, sample_dem_x = outline_to_dem(sample_outline_y, sample_outline_x) # transform the coordinates to the DEM coordinates
