@@ -8,7 +8,7 @@ VCO = 0.01  # Recommended VCO for overlap analysis in meters
 range_check = 5    # Recommended range for overlap analysis in pixels
 
 # MATLAB parameters 
-matlab_tol = 0.015      # Forming straight lines to the boundary
+matlab_tol = 0.015      # Forming straight lines to the boundary, also named delta_0
 matlab_factor = 0.98   # Fitting small circles 
 matlab_span = 0.07     # Nonparametric fitting
 matlab_exclusion_range = 3  # Radius for filtering convex points near overlaps
