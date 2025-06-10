@@ -8,6 +8,37 @@ from OverlapAnalysisFunctions import load_dem, load_outline, read_npy_file, find
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 
 def main():
+    """
+    Performs multi-dataset parameter optimization for clast overlap detection.
+    
+    This function:
+    1. Loads DEM, outline, and ground truth data from specified folders
+    2. Identifies matching datasets using filename identifiers (format: X-Y)
+    3. Tests multiple VCO and range_check parameter combinations on each dataset
+    4. Evaluates performance using confusion matrices (TP, FP, TN, FN)
+    5. Calculates accuracy, precision, recall, and F1 scores for each combination
+    6. Generates individual heatmaps and performance metrics for each dataset
+    7. Combines results across datasets to find globally optimal parameters
+    8. Creates visualizations of average metrics across all datasets
+    9. Saves comprehensive results to CSV files and images
+    
+    The function automatically creates a timestamped output directory containing:
+    - A folder for each dataset with individual results and visualizations
+    - An average_results.csv file with aggregated metrics
+    - An average_f1_score_heatmap.png showing performance across parameters
+    - A best_parameters.json file with optimal parameter values
+    - A datasets_info.txt file documenting processed datasets
+    
+    Input parameters are defined at the top of the function:
+    - dem_folder: Path to directory containing DEM files (.tif)
+    - outline_folder: Path to directory containing clast outlines (.tif/.npy)
+    - truth_folder: Path to directory containing ground truth files (.csv)
+    - VCOs: List of VCO values to test
+    - range_checks: List of range_check values to test
+    
+    Returns:
+        None: Results are saved to disk rather than returned
+    """
     # Define folders containing data - modify these paths as needed
     dem_folder = "/Users/.../DEM"
     outline_folder = "/Users/.../NPY"

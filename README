@@ -155,14 +155,6 @@ This interactive tool allows users to manually create ground truth data for over
 - Exports ground truth data to CSV for parameter optimization
 - Supports image transformations and multiple selection modes
 
-### AnalyseParameters.py
-This script analyzes different combinations of threshold and range_check parameters to determine optimal values:
-- Tests multiple parameter combinations against ground truth data
-- Calculates accuracy, precision, recall, and F1 scores using confusion matrices
-- Generates heatmaps and visualizations of performance metrics
-- Identifies the best parameter settings for different optimization goals
-- Outputs comprehensive analysis results to CSV and image files
-
 ### VCO_rangecheck_analysis.py
 This script enables batch processing of multiple datasets to find the optimal parameters of VCO and range check:
 - Analyzes one dataset at a time
@@ -171,6 +163,9 @@ This script enables batch processing of multiple datasets to find the optimal pa
 - Creates heatmap visualizations showing parameter sensitivity
 - Identifies globally optimal parameters that work well across diverse samples using the F1-score
 - Exports comprehensive results and visualizations for parameter selection
+
+### AnalyseParameters.py
+Does the same as the VCO_rangecheck_analysis.py but allows the user to calculate the best-fit parameters (VCO and range check) for a dataset.
 
 ------------------------------------------------------------
 

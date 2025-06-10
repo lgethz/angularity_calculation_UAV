@@ -9,20 +9,39 @@ from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, r
 
 def main():
     """
-    Parameter Optimization for Overlap Analysis
+    Single Dataset Parameter Optimization for Overlap Detection
     
-    This script systematically tests combinations of threshold (VCO) and range_check parameters
-    to find optimal settings for overlap detection. It calculates metrics (accuracy, precision,
-    recall, F1-score) by comparing detected overlaps with ground truth data, then visualizes 
-    results as heatmaps and identifies the best parameter combination.
+    This script systematically evaluates how different combinations of VCO (Vertical Cutoff 
+    Optimization) and range_check parameters affect overlap detection performance on a single 
+    dataset. It compares algorithm predictions against manually marked ground truth data to 
+    find optimal parameters based on various performance metrics.
+    
+    Workflow:
+    1. Loads a single DEM, outline/segmentation file, and ground truth overlap points
+    2. Tests a grid of parameter combinations (multiple VCO and range_check values)
+    3. For each combination:
+       - Runs overlap detection algorithm with those parameters
+       - Compares detected points with ground truth using spatial proximity matching
+       - Calculates confusion matrix components (TP, FP, TN, FN)
+       - Derives performance metrics (accuracy, precision, recall, F1 score)
+    4. Generates comprehensive visualizations:
+       - Heatmaps for each performance metric
+       - Enhanced F1 score heatmap with best parameters highlighted
+       - Individual heatmaps for confusion matrix components
+    5. Outputs multiple result files:
+       - CSV with all parameter combinations and their performance metrics
+       - Text file with analysis setup and parameters tested
+       - JSON file with best parameters by different optimization targets
+       - PNG visualizations for all metrics and confusion matrix components
     
     Required inputs:
     - dem_path: Path to DEM file (.tif format)
-    - outline_path: Path to grain outline/segmentation file (.tif or .npy)
+    - outline_path: Path to clast outline/segmentation file (.tif or .npy)
     - ground_truth_path: Path to CSV file with manually marked ground truth overlap points
-      CSV format should have columns: Grain_ID, X, Y
+      CSV format should have columns: clastID, X, Y
     
-    Results are saved to a timestamped folder including visualizations and metrics.
+    Note: For multi-dataset analysis that finds globally optimal parameters across multiple
+    samples, use VCO_rangecheck_analysis_dataset.py instead.
     """
     dem_path = "Users/folder/DEM/"
     outline_path = "Users/folder/Outline/"
