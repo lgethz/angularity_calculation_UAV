@@ -164,7 +164,7 @@ This script enables batch processing of multiple datasets to find the optimal pa
 - Identifies globally optimal parameters that work well across diverse samples using the F1-score
 - Exports comprehensive results and visualizations for parameter selection
 
-### AnalyseParameters.py
+### VCO_rangecheck_analysis_dataset.py
 Does the same as the VCO_rangecheck_analysis.py but allows the user to calculate the best-fit parameters (VCO and range check) for a dataset.
 
 ------------------------------------------------------------
